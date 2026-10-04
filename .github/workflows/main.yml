@@ -27,23 +27,34 @@ jobs:
             rm -rf proj/recorder-project
           fi
 
-      # Perbaikan Otomatis: Menyisipkan definisi variabel folder langsung ke file Kotlin sebelum build
-      - name: Auto Fix Kotlin References
+      # Perbaikan Baru: Membuat variabel global pembantu di dalam FilesUtil.kt tanpa merusak Screen lainnya
+      - name: Inject Safe Global Variables into FilesUtil
         run: |
-          # 1. Perbaikan untuk CameraScreen.kt
-          CAM_FILE="proj/app/src/main/java/com/h4ll0/recorder/CameraScreen.kt"
-          if [ -f "$CAM_FILE" ]; then
-            echo "Mengaplikasikan patch otomatis pada CameraScreen.kt..."
-            # Menyisipkan variabel pendukung tepat setelah deklarasi fungsi CameraScreen
-            sed -i 's/fun CameraScreen()/fun CameraScreen() {\n    val context = androidx.compose.ui.platform.LocalContext.current\n    val photosDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)!!\n    val videosDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)!!/g' "$CAM_FILE"
-          fi
+          UTIL_FILE="proj/app/src/main/java/com/h4ll0/recorder/FilesUtil.kt"
+          if [ -f "$UTIL_FILE" ]; then
+            echo "Menginjeksikan variabel global independen ke dalam FilesUtil.kt..."
+            
+            # Kita buat deklarasi variabel tiruan di luar objek agar bisa diakses langsung oleh CameraScreen dan MicScreen tanpa merusak kode
+            cat << 'EOF' >> "$UTIL_FILE"
 
-          # 2. Perbaikan untuk MicScreen.kt
-          MIC_FILE="proj/app/src/main/java/com/h4ll0/recorder/MicScreen.kt"
-          if [ -f "$MIC_FILE" ]; then
-            echo "Mengaplikasikan patch otomatis pada MicScreen.kt..."
-            # Menyisipkan variabel pendukung tepat setelah deklarasi fungsi MicScreen
-            sed -i 's/fun MicScreen()/fun MicScreen() {\n    val context = androidx.compose.ui.platform.LocalContext.current\n    val audioDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC)!!/g' "$MIC_FILE"
+// Tambahan otomatis dari CI untuk menyelesaikan masalah Unresolved Reference
+import android.annotation.SuppressLint
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import java.io.File
+
+val photosDir: File
+    @SuppressLint("ComposableNaming")
+    @Composable get() = LocalContext.current.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)!!
+
+val videosDir: File
+    @SuppressLint("ComposableNaming")
+    @Composable get() = LocalContext.current.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)!!
+
+val audioDir: File
+    @SuppressLint("ComposableNaming")
+    @Composable get() = LocalContext.current.getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC)!!
+EOF
           fi
 
       - name: Build with Gradle

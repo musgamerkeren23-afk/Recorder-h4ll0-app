@@ -27,22 +27,24 @@ jobs:
             rm -rf proj/recorder-project
           fi
 
-      # Perbaikan Utama: Membuat file baru mandiri dengan struktur objek File absolut untuk menghindari konflik import
-      - name: Create Isolated Paths File
+      # Solusi Mutakhir: Membuat file Kotlin di folder sementara root, lalu menyalinnya secara paksa ke folder yang tepat
+      - name: Force Inject CiDataPaths File
         run: |
-          TARGET_DIR="proj/app/src/main/java/com/h4ll0/recorder"
-          if [ -d "$TARGET_DIR" ]; then
-            echo "Membuat file baru CiDataPaths.kt untuk menambal variabel yang hilang..."
-            cat << 'EOF' > "$TARGET_DIR/CiDataPaths.kt"
-package com.h4ll0.recorder
-
-val photosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }
-val videosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }
-val audioDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }
-EOF
-            echo "File CiDataPaths.kt berhasil dibuat."
+          # Buat isi file Kotlin di folder root runner
+          echo 'package com.h4ll0.recorder' > CiDataPaths.kt
+          echo 'val photosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }' >> CiDataPaths.kt
+          echo 'val videosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }' >> CiDataPaths.kt
+          echo 'val audioDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }' >> CiDataPaths.kt
+          
+          # Cari di mana letak folder CameraScreen.kt Anda berada secara otomatis di seluruh folder proj
+          TARGET_PATH=$(find proj -name "CameraScreen.kt" -exec dirname {} \;)
+          
+          if [ -n "$TARGET_PATH" ]; then
+            echo "Menemukan jalur paket utama di: $TARGET_PATH"
+            cp CiDataPaths.kt "$TARGET_PATH/CiDataPaths.kt"
+            echo "File patch berhasil disuntikkan secara paksa tanpa merusak script."
           else
-            echo "ERROR: Folder paket utama tidak ditemukan!"
+            echo "ERROR: File CameraScreen.kt tidak ditemukan di seluruh struktur project!"
             exit 1
           fi
 

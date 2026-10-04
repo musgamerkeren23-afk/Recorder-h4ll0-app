@@ -27,21 +27,23 @@ jobs:
             rm -rf proj/recorder-project
           fi
 
-      # Solusi Pasti: Menyisipkan inisialisasi java.io.File murni langsung ke root internal aplikasi (tanpa merusak kurung kurawal)
-      - name: Auto Inject Missing Directory Variables
+      # Perbaikan Utama: Membuat file baru mandiri dengan struktur objek File absolut untuk menghindari konflik import
+      - name: Create Isolated Paths File
         run: |
-          # 1. Suntik variabel langsung di baris paling atas file CameraScreen.kt setelah package
-          CAM_FILE="proj/app/src/main/java/com/h4ll0/recorder/CameraScreen.kt"
-          if [ -f "$CAM_FILE" ]; then
-            echo "Patching CameraScreen.kt..."
-            sed -i '/package com.h4ll0.recorder/a \\nimport java.io.File\nval photosDir = File("/tmp").apply { mkdirs() }\nval videosDir = File("/tmp").apply { mkdirs() }' "$CAM_FILE"
-          fi
+          TARGET_DIR="proj/app/src/main/java/com/h4ll0/recorder"
+          if [ -d "$TARGET_DIR" ]; then
+            echo "Membuat file baru CiDataPaths.kt untuk menambal variabel yang hilang..."
+            cat << 'EOF' > "$TARGET_DIR/CiDataPaths.kt"
+package com.h4ll0.recorder
 
-          # 2. Suntik variabel langsung di baris paling atas file MicScreen.kt setelah package
-          MIC_FILE="proj/app/src/main/java/com/h4ll0/recorder/MicScreen.kt"
-          if [ -f "$MIC_FILE" ]; then
-            echo "Patching MicScreen.kt..."
-            sed -i '/package com.h4ll0.recorder/a \\nimport java.io.File\nval audioDir = File("/tmp").apply { mkdirs() }' "$MIC_FILE"
+val photosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }
+val videosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }
+val audioDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }
+EOF
+            echo "File CiDataPaths.kt berhasil dibuat."
+          else
+            echo "ERROR: Folder paket utama tidak ditemukan!"
+            exit 1
           fi
 
       - name: Build with Gradle

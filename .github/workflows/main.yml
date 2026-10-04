@@ -5,12 +5,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 17 }
+        with: 
+          distribution: temurin
+          java-version: 17
+          
       - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: "8.7" }
-      - run: unzip -q recorder-project.zip -d proj
-      - run: gradle -p proj assembleDebug --no-daemon
+        with: 
+          gradle-version: "8.7"
+          
+      - name: Extract Project
+        run: unzip -q recorder-project.zip -d proj
+
+      # Perbaikan: Mengeluarkan file jika isi ZIP terbungkus di dalam folder 'recorder-project'
+      - name: Move files up if nested inside recorder-project
+        run: |
+          if [ -d "proj/recorder-project" ]; then
+            echo "Mendeteksi folder recorder-project di dalam ZIP, memindahkan file..."
+            mv proj/recorder-project/* proj/ 2>/dev/null || true
+            mv proj/recorder-project/.* proj/ 2>/dev/null || true
+            rm -rf proj/recorder-project
+          fi
+
+      - name: Build with Gradle
+        run: gradle -p proj assembleDebug --no-daemon
+
       - uses: actions/upload-artifact@v4
         with:
           name: RecorderH4ll0-APK

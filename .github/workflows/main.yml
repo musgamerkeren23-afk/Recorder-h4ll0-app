@@ -1,4 +1,3 @@
-
 name: Build APK
 on: [push, workflow_dispatch]
 jobs:
@@ -28,27 +27,21 @@ jobs:
             rm -rf proj/recorder-project
           fi
 
-      # Perbaikan Total: Membuat file variabel global murni tanpa menggunakan anotasi @Composable yang dilarang
-      - name: Create Valid CiGlobals File
+      # Solusi Pasti: Menyisipkan inisialisasi java.io.File murni langsung ke root internal aplikasi (tanpa merusak kurung kurawal)
+      - name: Auto Inject Missing Directory Variables
         run: |
-          TARGET_DIR="proj/app/src/main/java/com/h4ll0/recorder"
-          if [ -d "$TARGET_DIR" ]; then
-            echo "Membuat ulang file CiGlobals.kt dengan skema objek File murni..."
-            cat << 'EOF' > "$TARGET_DIR/CiGlobals.kt"
-package com.h4ll0.recorder
+          # 1. Suntik variabel langsung di baris paling atas file CameraScreen.kt setelah package
+          CAM_FILE="proj/app/src/main/java/com/h4ll0/recorder/CameraScreen.kt"
+          if [ -f "$CAM_FILE" ]; then
+            echo "Patching CameraScreen.kt..."
+            sed -i '/package com.h4ll0.recorder/a \\nimport java.io.File\nval photosDir = File("/tmp").apply { mkdirs() }\nval videosDir = File("/tmp").apply { mkdirs() }' "$CAM_FILE"
+          fi
 
-import java.io.File
-
-// Membuat file kosong di direktori cache bawaan sistem operasi Linux/Android 
-// Ini akan dibaca sebagai objek File biasa oleh CameraScreen dan MicScreen tanpa melanggar aturan Compose
-val photosDir: File = File("/tmp/photos").apply { if (!exists()) mkdirs() }
-val videosDir: File = File("/tmp/videos").apply { if (!exists()) mkdirs() }
-val audioDir: File = File("/tmp/audio").apply { if (!exists()) mkdirs() }
-EOF
-            echo "File CiGlobals.kt berhasil diverifikasi."
-          else
-            echo "ERROR: Jalur paket project tidak valid!"
-            exit 1
+          # 2. Suntik variabel langsung di baris paling atas file MicScreen.kt setelah package
+          MIC_FILE="proj/app/src/main/java/com/h4ll0/recorder/MicScreen.kt"
+          if [ -f "$MIC_FILE" ]; then
+            echo "Patching MicScreen.kt..."
+            sed -i '/package com.h4ll0.recorder/a \\nimport java.io.File\nval audioDir = File("/tmp").apply { mkdirs() }' "$MIC_FILE"
           fi
 
       - name: Build with Gradle

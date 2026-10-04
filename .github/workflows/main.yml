@@ -18,7 +18,6 @@ jobs:
       - name: Extract Project
         run: unzip -q recorder-project.zip -d proj
 
-      # Perbaikan: Mengeluarkan file jika isi ZIP terbungkus di dalam folder 'recorder-project'
       - name: Move files up if nested inside recorder-project
         run: |
           if [ -d "proj/recorder-project" ]; then
@@ -26,6 +25,25 @@ jobs:
             mv proj/recorder-project/* proj/ 2>/dev/null || true
             mv proj/recorder-project/.* proj/ 2>/dev/null || true
             rm -rf proj/recorder-project
+          fi
+
+      # Perbaikan Otomatis: Menyisipkan definisi variabel folder langsung ke file Kotlin sebelum build
+      - name: Auto Fix Kotlin References
+        run: |
+          # 1. Perbaikan untuk CameraScreen.kt
+          CAM_FILE="proj/app/src/main/java/com/h4ll0/recorder/CameraScreen.kt"
+          if [ -f "$CAM_FILE" ]; then
+            echo "Mengaplikasikan patch otomatis pada CameraScreen.kt..."
+            # Menyisipkan variabel pendukung tepat setelah deklarasi fungsi CameraScreen
+            sed -i 's/fun CameraScreen()/fun CameraScreen() {\n    val context = androidx.compose.ui.platform.LocalContext.current\n    val photosDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)!!\n    val videosDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)!!/g' "$CAM_FILE"
+          fi
+
+          # 2. Perbaikan untuk MicScreen.kt
+          MIC_FILE="proj/app/src/main/java/com/h4ll0/recorder/MicScreen.kt"
+          if [ -f "$MIC_FILE" ]; then
+            echo "Mengaplikasikan patch otomatis pada MicScreen.kt..."
+            # Menyisipkan variabel pendukung tepat setelah deklarasi fungsi MicScreen
+            sed -i 's/fun MicScreen()/fun MicScreen() {\n    val context = androidx.compose.ui.platform.LocalContext.current\n    val audioDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC)!!/g' "$MIC_FILE"
           fi
 
       - name: Build with Gradle

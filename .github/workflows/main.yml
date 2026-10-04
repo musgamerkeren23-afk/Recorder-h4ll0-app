@@ -27,17 +27,15 @@ jobs:
             rm -rf proj/recorder-project
           fi
 
-      # Perbaikan Baru: Membuat variabel global pembantu di dalam FilesUtil.kt tanpa merusak Screen lainnya
-      - name: Inject Safe Global Variables into FilesUtil
+      # Solusi Baru: Membuat file Kotlin mandiri terpisah agar tidak merusak baris kode file lain
+      - name: Create Independent CiGlobals File
         run: |
-          UTIL_FILE="proj/app/src/main/java/com/h4ll0/recorder/FilesUtil.kt"
-          if [ -f "$UTIL_FILE" ]; then
-            echo "Menginjeksikan variabel global independen ke dalam FilesUtil.kt..."
-            
-            # Kita buat deklarasi variabel tiruan di luar objek agar bisa diakses langsung oleh CameraScreen dan MicScreen tanpa merusak kode
-            cat << 'EOF' >> "$UTIL_FILE"
+          TARGET_DIR="proj/app/src/main/java/com/h4ll0/recorder"
+          if [ -d "$TARGET_DIR" ]; then
+            echo "Membuat file baru CiGlobals.kt untuk menyediakan variabel yang hilang..."
+            cat << 'EOF' > "$TARGET_DIR/CiGlobals.kt"
+package com.h4ll0.recorder
 
-// Tambahan otomatis dari CI untuk menyelesaikan masalah Unresolved Reference
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +53,10 @@ val audioDir: File
     @SuppressLint("ComposableNaming")
     @Composable get() = LocalContext.current.getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC)!!
 EOF
+            echo "File CiGlobals.kt berhasil dibuat."
+          else
+            echo "ERROR: Direktori paket utama tidak ditemukan!"
+            exit 1
           fi
 
       - name: Build with Gradle

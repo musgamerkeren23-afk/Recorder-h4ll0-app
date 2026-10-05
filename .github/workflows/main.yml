@@ -5,52 +5,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - uses: actions/setup-java@v4
-        with: 
-          distribution: temurin
-          java-version: 17
-          
+        with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
-        with: 
-          gradle-version: "8.7"
-          
-      - name: Extract Project
-        run: unzip -q recorder-project.zip -d proj
-
-      - name: Move files up if nested inside recorder-project
-        run: |
-          if [ -d "proj/recorder-project" ]; then
-            echo "Mendeteksi folder recorder-project di dalam ZIP, memindahkan file..."
-            mv proj/recorder-project/* proj/ 2>/dev/null || true
-            mv proj/recorder-project/.* proj/ 2>/dev/null || true
-            rm -rf proj/recorder-project
-          fi
-
-      # Solusi Mutakhir: Membuat file Kotlin di folder sementara root, lalu menyalinnya secara paksa ke folder yang tepat
-      - name: Force Inject CiDataPaths File
-        run: |
-          # Buat isi file Kotlin di folder root runner
-          echo 'package com.h4ll0.recorder' > CiDataPaths.kt
-          echo 'val photosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }' >> CiDataPaths.kt
-          echo 'val videosDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }' >> CiDataPaths.kt
-          echo 'val audioDir: java.io.File get() = java.io.File("/tmp").apply { if (!exists()) mkdirs() }' >> CiDataPaths.kt
-          
-          # Cari di mana letak folder CameraScreen.kt Anda berada secara otomatis di seluruh folder proj
-          TARGET_PATH=$(find proj -name "CameraScreen.kt" -exec dirname {} \;)
-          
-          if [ -n "$TARGET_PATH" ]; then
-            echo "Menemukan jalur paket utama di: $TARGET_PATH"
-            cp CiDataPaths.kt "$TARGET_PATH/CiDataPaths.kt"
-            echo "File patch berhasil disuntikkan secara paksa tanpa merusak script."
-          else
-            echo "ERROR: File CameraScreen.kt tidak ditemukan di seluruh struktur project!"
-            exit 1
-          fi
-
-      - name: Build with Gradle
-        run: gradle -p proj assembleDebug --no-daemon
-
+        with: { gradle-version: "8.7" }
+      - run: unzip -q recorder-project.zip -d proj
+      - run: gradle -p proj assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: RecorderH4ll0-APK
